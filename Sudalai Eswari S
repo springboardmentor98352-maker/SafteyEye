@@ -1,0 +1,171 @@
+# --------------------------------------------
+# SafetyEye - Clean Demo Simulator (FULL CODE)
+# --------------------------------------------
+
+import os
+import cv2
+import time
+import random
+import numpy as np
+import pandas as pd
+from datetime import datetime
+import streamlit as st
+
+# --------------------------------------------
+# Streamlit UI Setup
+# --------------------------------------------
+st.set_page_config(page_title="SafetyEye Demo", layout="wide")
+
+st.sidebar.title("SafetyEye Demo Control")
+
+mode = st.sidebar.selectbox(
+    "Select Mode",
+    ["Simulator (default)", "Upload Test Image/Video", "Future: Real Model"]
+)
+
+sim_people = st.sidebar.slider("People per frame", 1, 10, 3)
+sim_violation_rate = st.sidebar.slider("Violation Chance (%)", 0, 100, 20)
+show_boxes = st.sidebar.checkbox("Show Boxes", True)
+
+start = st.sidebar.button("START Simulation")
+stop = st.sidebar.button("STOP Simulation")
+clear = st.sidebar.button("Clear Logs")
+
+# --------------------------------------------
+# Session state
+# --------------------------------------------
+if "run" not in st.session_state:
+    st.session_state.run = False
+if "logs" not in st.session_state:
+    st.session_state.logs = []
+
+if start:
+    st.session_state.run = True
+
+if stop:
+    st.session_state.run = False
+
+if clear:
+    st.session_state.logs = []
+
+# --------------------------------------------
+# Page Layout
+# --------------------------------------------
+left, right = st.columns([2, 1])
+
+with left:
+    st.header("Live Demo Feed")
+    feed_view = st.empty()
+
+with right:
+    st.header("Safety Metrics")
+
+    people_m = st.metric("People Detected", 0)
+    viol_m = st.metric("Current Violations", 0)
+    alerts_m = st.metric("Total Alerts (Session)", 0)
+
+    st.subheader("Violation Log")
+    log_view = st.empty()
+
+    if st.session_state.logs:
+        df = pd.DataFrame(st.session_state.logs)
+        st.download_button(
+            "Download Logs CSV",
+            df.to_csv(index=False).encode("utf-8"),
+            "safeteye_logs.csv",
+            "text/csv"
+        )
+
+# --------------------------------------------
+# Simulator: Generate a Fake Frame
+# --------------------------------------------
+def simulate_frame(frame_id, people_count, violation_rate):
+    h, w = 480, 720
+    frame = np.ones((h, w, 3), dtype=np.uint8) * 200
+
+    detections = []
+
+    for i in range(people_count):
+        x1 = int((i + 1) * w / (people_count + 1)) - 40
+        y1 = random.randint(150, 230)
+        x2 = x1 + random.randint(60, 100)
+        y2 = y1 + random.randint(130, 180)
+
+        missing = []
+
+        if random.random() < violation_rate / 100:
+            missing = random.choice([["helmet"], ["vest"], ["helmet", "vest"]])
+
+        # Draw person silhouette
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (60, 60, 60), -1)
+        cv2.circle(frame, (int((x1 + x2) / 2), y1 - 20), 20, (120, 180, 230), -1)
+
+        # Helmet indicator
+        if "helmet" in missing:
+            cv2.rectangle(frame, (x1, y1 - 50), (x2, y1 - 25), (0, 0, 255), 2)
+        else:
+            cv2.rectangle(frame, (x1, y1 - 50), (x2, y1 - 25), (0, 255, 0), -1)
+
+        # Vest indicator
+        if "vest" in missing:
+            cv2.rectangle(frame, (x1 + 5, y1 + 10), (x2 - 5, y1 + 70), (0, 0, 255), 2)
+        else:
+            cv2.rectangle(frame, (x1 + 5, y1 + 10), (x2 - 5, y1 + 70), (0, 255, 0), -1)
+
+        # Optional bounding box
+        if show_boxes:
+            color = (0, 255, 0) if not missing else (0, 0, 255)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(frame, f"P{i}", (x1, y1 - 60),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
+        detections.append({
+            "id": i,
+            "missing": missing
+        })
+
+    return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), detections
+
+# --------------------------------------------
+# Main Simulation Loop
+# --------------------------------------------
+frame_id = 0
+
+if st.session_state.run:
+
+    if mode != "Simulator (default)":
+        st.warning("Only Simulator mode is implemented.")
+    else:
+        st.info("Simulation Running...")
+
+        while st.session_state.run:
+
+            frame_id += 1
+
+            frame, dets = simulate_frame(frame_id, sim_people, sim_violation_rate)
+
+            # Log violations
+            for d in dets:
+                if d["missing"]:
+                    st.session_state.logs.append({
+                        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "frame": frame_id,
+                        "person": d["id"],
+                        "missing_items": ",".join(d["missing"])
+                    })
+
+            # Update UI
+            feed_view.image(frame, use_column_width=True)
+
+            people_m.metric("People Detected", len(dets))
+            viol_m.metric("Current Violations", sum(1 for d in dets if d["missing"]))
+            alerts_m.metric("Total Alerts (Session)", len(st.session_state.logs))
+
+            if st.session_state.logs:
+                df = pd.DataFrame(st.session_state.logs)
+                log_view.dataframe(df.tail(20))
+
+            time.sleep(0.4)
+
+else:
+    st.info("Click START to begin simulation.")
