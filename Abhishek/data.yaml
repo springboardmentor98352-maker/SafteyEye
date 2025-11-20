@@ -1,0 +1,5 @@
+
+train: /Users/apple/Documents/Safety Eye Project/css-data/train/images/train
+val: /Users/apple/Documents/Safety Eye Project/css-data/valid/images/val
+nc: 3
+names: ["helmet", "nohelmet", "person"]
