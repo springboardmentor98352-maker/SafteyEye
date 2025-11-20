@@ -1,0 +1,17 @@
+path: ../data/raw/css-data
+
+train: train/images
+val: valid/images
+test: test/images
+
+names:
+  0: Hardhat
+  1: NO-Hardhat
+  2: NO-Safety Vest
+  3: Person
+  4: Safety Cone
+  5: Safety Vest
+  6: machinery
+  7: vehicle
+  8: excavator
+  9: fork-lift
