@@ -61,7 +61,7 @@ def worker_count_chart(counts):
 
     fig, ax = plt.subplots()
     ax.plot(counts, marker='o', linewidth=2)
-    ax.set_ylim(0, 6)   # keeps chart tidy
+    ax.set_ylim(0, 6)  
     ax.set_xlabel("Frame")
     ax.set_ylabel("Workers Detected")
     ax.set_title("Worker Count Trend")
