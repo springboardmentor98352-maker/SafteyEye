@@ -17,9 +17,7 @@ if "worker_db" not in st.session_state:
         "Last Seen": ["--"] * 5,
     })
 
-# -----
-# PAGE CONFIG
-# ----------------------------------------------------
+# -----PAGE CONFIG-------
 st.set_page_config(
     page_title="SafetyEye Dashboard",
     layout="wide",
@@ -29,9 +27,7 @@ st.set_page_config(
 # Load custom CSS
 load_css()
 
-# ----------------------------------------------------
-# SESSION STATE INIT
-# ----------------------------------------------------
+# ----SESSION STATE INIT-----
 if "running" not in st.session_state:
     st.session_state.running = False
 
@@ -52,17 +48,13 @@ if "violation_history" not in st.session_state:
 
 
 
-# ----------------------------------------------------
-# PAGE HEADER
-# ----------------------------------------------------
+# ----PAGE HEADER-----
 st.title("🛡 SafetyEye – Real-Time Safety Monitoring")
 st.write("AI-powered workplace safety monitoring & alert system.")
 
 st.markdown("---")
 
-# ----------------------------------------------------
-# SIDEBAR CONTROLS
-# ----------------------------------------------------
+# -----SIDEBAR CONTROLS------
 with st.sidebar:
     st.header("⚙️ Simulation Controls")
 
@@ -95,9 +87,7 @@ with st.sidebar:
         )
         
 
-# ----------------------------------------------------
-# LIVE SIMULATION AREA
-# ----------------------------------------------------
+# ------LIVE SIMULATION AREA--------
 left, right = st.columns([2, 1])
 
 with left:
@@ -139,7 +129,7 @@ if st.session_state.running:
             df.at[i, "Last Seen"] = time.strftime("%H:%M:%S")
 
         st.session_state.worker_db = df
-        # ----------------------------------------------------
+------------------------------------------------
 
         time.sleep(1 / speed)
 
