@@ -1,0 +1,16 @@
+path: E:/SafetyEye/backend/data
+train: images/train
+val: images/val
+test: images/test
+names:
+- person
+- helmet
+- vest
+- no_helmet
+- face_mask
+- boot
+- gloves
+- vehicle
+- sign
+- other_equipment
+
