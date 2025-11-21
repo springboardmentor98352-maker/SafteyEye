@@ -1,0 +1,11 @@
+train: C:/Users/gauri/Downloads/YOLO_data/images/train
+val: C:/Users/gauri/Downloads/YOLO_data/images/val
+nc: 7
+names:
+- Hardhat
+- Mask
+- NO-Hardhat
+- NO-Mask
+- Person
+- Vest
+- NO-Vest
