@@ -1,0 +1,47 @@
+model:
+  name: yolov8
+  version: v8.0
+  input_size: 640
+  batch_size: 16
+  epochs: 100
+  learning_rate: 0.001
+  momentum: 0.937
+  weight_decay: 0.0005
+  image_augmentation:
+    flip: true
+    rotate: 10
+    scale: [0.8, 1.2]
+  optimizer:
+    type: SGD
+    params:
+      momentum: 0.9
+      weight_decay: 0.0005
+  scheduler:
+    type: StepLR
+    step_size: 30
+    gamma: 0.1
+  loss:
+    type: BCEWithLogitsLoss
+  metrics:
+    - precision
+    - recall
+    - mAP
+  save_model:
+    path: models/safety_detector/
+    format: torch
+    save_best_only: true
+
+detection:
+  confidence_threshold: 0.25
+  nms_threshold: 0.4
+  classes:
+    - Hardhat
+    - Safety Vest
+    - Mask
+    - NO-Hardhat
+    - NO-Safety Vest
+    - NO-Mask
+    - Person
+    - Safety Cone
+    - Machinery
+    - Vehicle
