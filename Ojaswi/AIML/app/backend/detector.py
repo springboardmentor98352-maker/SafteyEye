@@ -8,7 +8,7 @@ from datetime import datetime
 import os
 
 # Load your trained YOLO model
-MODEL_PATH = "yolov8s.pt"
+MODEL_PATH = "yolov8s.pt"   # change to "best.pt" if needed
 model = YOLO(MODEL_PATH)
 
 def predict_image(img_path):
@@ -22,18 +22,29 @@ def predict_frame(frame):
     return results
 
 def save_violation(label, confidence, image):
-    """Save detection logs in a folder."""
+    """Save violation image and log details."""
+    
+    # ensure folders exist
     os.makedirs("violations", exist_ok=True)
+    os.makedirs("database", exist_ok=True)
 
+    # create unique file name
     file_id = str(uuid.uuid4())[:8]
     filename = f"violations/{file_id}.jpg"
+
+    # save image
     cv2.imwrite(filename, image)
 
+    # timestamp
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    log_line = f"{file_id},{label},{confidence},{filename},{timestamp}\n"
-    log_path = "violations_log.csv"
+    # log file path
+    log_path = os.path.join("database", "violations_log.csv")
 
+    # data entry format
+    log_line = f"{file_id},{label},{confidence},{filename},{timestamp}\n"
+
+    # write to log file
     with open(log_path, "a") as f:
         f.write(log_line)
 

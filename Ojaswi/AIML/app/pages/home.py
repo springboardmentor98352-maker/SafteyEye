@@ -1,42 +1,55 @@
 import streamlit as st
+import pandas as pd
+from pathlib import Path
 from datetime import datetime
-import random
+
+def load_data():
+    csv_path = Path("database/violations_log.csv")
+
+    if not csv_path.exists():
+        return pd.DataFrame(columns=["id","label","confidence","image","timestamp"])
+
+    return pd.read_csv(csv_path, header=None, names=["id","label","confidence","image","timestamp"])
+
 
 def app():
-    st.markdown('<div class="hero"><h1 style="margin:0">🪐 SafetyEye — Overview</h1><div class="small-muted">Purple Galaxy theme • Live PPE monitoring</div></div>', unsafe_allow_html=True)
-    st.write('')
+    st.subheader("📊 Dashboard Overview")
 
-    # KPI row
-    c1, c2, c3, c4 = st.columns([1.1,1,1,1])
-    c1.markdown('<div class="card"><div class="kpi"><div><span class="num">32</span></div><div style="margin-left:8px"><div class="lbl">Total Violations</div><div class="small-muted">+3 today</div></div></div></div>', unsafe_allow_html=True)
-    c2.markdown('<div class="card"><div class="kpi"><div><span class="num">89%</span></div><div style="margin-left:8px"><div class="lbl">Helmet Compliance</div><div class="small-muted">+2%</div></div></div></div>', unsafe_allow_html=True)
-    c3.markdown('<div class="card"><div class="kpi"><div><span class="num">93%</span></div><div style="margin-left:8px"><div class="lbl">Mask Compliance</div><div class="small-muted">+1%</div></div></div></div>', unsafe_allow_html=True)
-    c4.markdown('<div class="card"><div class="kpi"><div><span class="num">3</span></div><div style="margin-left:8px"><div class="lbl">Active Cameras</div><div class="small-muted">Online</div></div></div></div>', unsafe_allow_html=True)
+    df = load_data()
 
-    st.markdown('---')
-    st.subheader('Recent Violations')
+    # Metrics Section
+    total = len(df)
+    today = datetime.now().strftime("%Y-%m-%d")
+    today_count = len(df[df["timestamp"].astype(str).str.contains(today)]) if not df.empty else 0
+    top_label = df["label"].value_counts().idxmax() if not df.empty else "None"
+    avg_conf = df["confidence"].mean() if not df.empty else 0.0
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    col1.metric("Total Violations", total)
+    col2.metric("Today's Violations", today_count)
+    col3.metric("Most Common Violation", top_label)
+    col4.metric("Avg Detection Confidence", f"{avg_conf:.2f}")
+
+    st.write("---")
+
+    st.subheader("🖼 Recent Violations")
+
+    if df.empty:
+        st.info("No records yet. Start Live Monitoring.")
+        return
+
+    recent = df.sort_values("timestamp", ascending=False).head(6)
 
     cols = st.columns(3)
-    rows = []
 
-    for i in range(6):
-        rows.append({
-            'id': i+1,
-            'label': random.choice(['NO-Hardhat','NO-Vest','NO-Mask']),
-            'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        })
+    for i, row in recent.iterrows():
+        block = cols[i % 3]
+        block.markdown(f"**{row['label']} — {row['timestamp']}**")
 
-    for idx, r in enumerate(rows):
-        c = cols[idx % 3]
-        c.markdown(
-            f"""
-            <div class='card'>
-                <b>ID:</b> {r['id']}<br>
-                <b>Type:</b> {r['label']}<br>
-                <span class='small-muted'>{r['time']}</span>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        img_path = Path(row["image"])
 
-    st.markdown('<div class="footer">Tip: Connect backend at <code>http://localhost:8000</code> to enable live data and logs.</div>', unsafe_allow_html=True)
+        if img_path.exists():
+            block.image(str(img_path), use_column_width=True)
+        else:
+            block.warning("Image Missing ⚠️")

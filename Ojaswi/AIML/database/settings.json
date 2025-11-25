@@ -1,0 +1,5 @@
+{
+    "confidence_threshold": 0.55,
+    "audio_alerts": true,
+    "generate_pdf": true
+}

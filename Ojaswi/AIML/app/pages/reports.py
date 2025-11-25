@@ -1,58 +1,82 @@
-# app/pages/reports.py
 import streamlit as st
 import pandas as pd
-import os
-from fpdf import FPDF
-from datetime import datetime
-import time
+from pathlib import Path
 
+def load_data():
+    csv_path = Path("database/violations_log.csv")
+    if not csv_path.exists():
+        return pd.DataFrame(columns=["id","label","confidence","image","timestamp"])
+    return pd.read_csv(csv_path, header=None, names=["id","label","confidence","image","timestamp"])
 
-def make_challan(record):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=14)
-    pdf.cell(0, 10, "Traffic Violation Challan", ln=True, align='C')
-    pdf.ln(6)
-    pdf.set_font("Arial", size=12)
-    pdf.cell(0, 8, f"Case ID: {record.get('case_id', '')}", ln=True)
-    pdf.cell(0, 8, f"Type: {record.get('label','')}", ln=True)
-    pdf.cell(0, 8, f"Location: {record.get('location','')}", ln=True)
-    pdf.cell(0, 8, f"Phone: {record.get('phone','')}", ln=True)
-    pdf.cell(0, 8, f"Detected at: {record.get('timestamp','')}", ln=True)
-    fname = f"challan_{record.get('case_id', str(int(time.time())))}.pdf"
-    pdf.output(fname)
-    return fname
 
 def app():
-    st.header("📑 Violations & Challan Generator")
-    uploaded = st.file_uploader("Upload violations CSV (optional)", type=["csv"])
-    if uploaded:
-        df = pd.read_csv(uploaded)
-    else:
-        df_path = os.path.join("..", "database", "violations_log.csv")
-        if os.path.exists(df_path):
-            df = pd.read_csv(df_path)
-        else:
-            df = pd.DataFrame(columns=['id','label','confidence','image_path','timestamp','location','phone'])
-    st.dataframe(df)
+    st.subheader("📄 Violation Records")
+
+    df = load_data()
+
+    if df.empty:
+        st.info("⚠ No records found. Start Live Monitoring first.")
+        return
+
+    df = df.sort_values("timestamp", ascending=False)
+
+    # ======= SEARCH BAR =======
+    search = st.text_input("🔍 Search by Violation Type, ID or Timestamp:", "")
+
+    if search.strip():
+        df = df[df.apply(lambda row: search.lower() in row.astype(str).str.lower().to_string(), axis=1)]
+
+    st.write(f"📌 Showing **{len(df)}** records")
+
+    # ======= EXPORT BUTTON =======
+    export_df = df.copy()
+    export_df.to_csv("database/exported_violations.csv", index=False)
+
+    st.download_button(
+        label="📤 Download CSV (Filtered Results)",
+        data=export_df.to_csv(index=False),
+        file_name="SafetyEye_Report.csv",
+        mime="text/csv"
+    )
 
     st.markdown("---")
-    st.subheader("Create Challan (manual)")
-    col1, col2 = st.columns(2)
-    label = col1.selectbox("Violation Type", ["NO-Helmet","NO-Mask","NO-Vest","Overspeed","Signal Jump"])
-    phone = col2.text_input("Phone number")
-    location = col1.text_input("Location / Area")
-    notes = col2.text_area("Notes")
-    if st.button("Generate Challan PDF"):
-        rec = {
-            "case_id": datetime.now().strftime("%Y%m%d%H%M%S"),
-            "label": label,
-            "location": location,
-            "phone": phone,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "notes": notes
-        }
-        fname = make_challan(rec)
-        with open(fname, "rb") as f:
-            st.download_button("Download Challan", f, file_name=fname)
-        st.success("Challan generated and ready to download.")
+
+
+    # ======= LIST DISPLAY =======
+    for idx, row in df.iterrows():
+        with st.container(border=True):
+            col1, col2 = st.columns([3, 2])
+
+            # Left Section
+            with col1:
+                st.write(f"### 🆔 {row['id']} — {row['label']}")
+                st.write(f"📅 {row['timestamp']}")
+                st.write(f"🎯 Confidence: **{row['confidence']:.2f}**")
+
+                image_path = Path(row["image"])
+                if image_path.exists():
+                    st.image(str(image_path), width=350)
+                else:
+                    st.warning("❌ Image missing")
+
+            # Right Section
+            with col2:
+                pdf_path = Path(f"database/{row['id']}.pdf")
+
+                if pdf_path.exists():
+                    # Download button
+                    with open(pdf_path, "rb") as f:
+                        st.download_button(
+                            label="📥 Download Challan PDF",
+                            data=f,
+                            file_name=f"{row['id']}.pdf",
+                        )
+
+                    # Preview
+                    st.markdown(f"📎 **Preview:** `{row['id']}.pdf`")
+                    st.markdown(
+                        f'<iframe src="database/{row["id"]}.pdf" width="100%" height="300"></iframe>',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.warning("🚫 PDF missing")

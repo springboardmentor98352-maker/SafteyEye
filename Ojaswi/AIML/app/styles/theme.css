@@ -1,0 +1,89 @@
+/* -------- Global Font -------- */
+* {
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* -------- App Background -------- */
+body {
+    background: #eef2f7;
+}
+
+/* -------- Header Box -------- */
+.header-container {
+    background: rgba(255, 255, 255, 0.85);
+    padding: 18px 25px;
+    border-radius: 12px;
+    border-left: 6px solid #1d4ed8;
+    margin-bottom: 1.2rem;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    font-weight: 600;
+}
+
+/* -------- Sidebar -------- */
+[data-testid="stSidebar"] {
+    background: #ffffff !important;
+    border-right: 1px solid #d6d6d6;
+}
+
+/* -------- KPI Cards -------- */
+.kpi-box {
+    background: white;
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid #d4dae5;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    text-align: center;
+    transition: 0.25s;
+}
+
+.kpi-box:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* -------- Table Styling -------- */
+.dataframe {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* -------- Buttons -------- */
+.stButton>button {
+    background: #1d4ed8 !important;
+    color: white !important;
+    border-radius: 8px !important;
+    padding: 10px 18px !important;
+    border: none !important;
+    transition: 0.3s !important;
+    font-weight: 500;
+}
+
+.stButton>button:hover {
+    background: #0f3bb4 !important;
+    transform: scale(1.03);
+}
+
+/* -------- Alert Box (Success / Warning UI) -------- */
+.alert-box {
+    padding: 10px;
+    border-radius: 10px;
+    font-weight: 500;
+    color: white;
+}
+
+/* error */
+.error {
+    background: #b91c1c;
+}
+
+/* success */
+.success {
+    background: #15803d;
+}
+
+/* warning */
+.warning {
+    background: #f59e0b;
+    color: black;
+}

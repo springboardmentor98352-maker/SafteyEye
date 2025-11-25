@@ -1,93 +1,99 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
-from streamlit_folium import st_folium
-import folium
-from folium.plugins import HeatMap
+from pathlib import Path
+import plotly.express as px
+
+def load_data():
+    csv_path = Path("database/violations_log.csv")
+    if not csv_path.exists():
+        return pd.DataFrame(columns=["id","label","confidence","image","timestamp"])
+    
+    df = pd.read_csv(csv_path, header=None, names=["id","label","confidence","image","timestamp"])
+    df["date"] = pd.to_datetime(df["timestamp"]).dt.date
+    return df
+
 
 def app():
-    st.markdown("<h1 style='color:#ff4d4d;'>📊 Traffic Analytics Dashboard</h1>", unsafe_allow_html=True)
-    st.write("Real-time insights, violation trends, hotspot heatmaps & zone intelligence.")
 
-    # -----------------------------
-    #  SAMPLE DATA (Replace with backend later)
-    # -----------------------------
-    data = pd.DataFrame({
-        "zone": ["A", "B", "C", "A", "C", "B", "A"],
-        "type": ["NO-Helmet", "Speeding", "Triple Riding", "Signal Jump", "NO-Seatbelt", "Speeding", "NO-Helmet"],
-        "count": [23, 40, 12, 18, 30, 29, 25],
-        "lat": [19.0760, 19.0910, 19.0650, 19.0801, 19.1103, 19.0402, 19.0988],
-        "lon": [72.8777, 72.8890, 72.8700, 72.8992, 72.8601, 72.8400, 72.9155],
-    })
+    st.subheader("📈 Analytics & Trends")
 
-    # -----------------------------
-    # 1. VIOLATION TREND (ALT-AIR)
-    # -----------------------------
-    st.subheader("📈 Violations Trend Over Time")
+    df = load_data()
 
-    chart = (
-        alt.Chart(data)
-        .mark_bar(color="#ff4d4d")
-        .encode(
-            x="type:N",
-            y="count:Q",
-            tooltip=["type", "count"]
-        )
-        .properties(height=350)
+    if df.empty:
+        st.info("⚠ No data available yet. Please run Live Monitor.")
+        return
+
+    # ===============================
+    # KPI Cards
+    # ===============================
+    total = len(df)
+    top_label = df["label"].value_counts().idxmax()
+    avg_conf = df["confidence"].mean()
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.markdown(f"<div class='kpi-box'>📌 Total Logged<br><h2>{total}</h2></div>", unsafe_allow_html=True)
+    col2.markdown(f"<div class='kpi-box'>🔥 Most Common<br><h2>{top_label}</h2></div>", unsafe_allow_html=True)
+    col3.markdown(f"<div class='kpi-box'>🎯 Avg. Confidence<br><h2>{avg_conf:.2f}</h2></div>", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ===============================
+    # PIE CHART — Violation Type Distribution
+    # ===============================
+    st.subheader("🔍 Violation Breakdown")
+    
+    pie_fig = px.pie(
+        df,
+        names="label",
+        title="Violation Type Distribution",
+        hole=0.45,
+        color_discrete_sequence=px.colors.qualitative.Dark24
     )
-    st.altair_chart(chart, use_container_width=True)
+
+    st.plotly_chart(pie_fig, use_container_width=True)
 
     st.markdown("---")
 
-    # -----------------------------
-    # 2. ZONE-WISE PIE CHART
-    # -----------------------------
-    st.subheader("🗂️ Zone-Wise Violations")
+    # ===============================
+    # TREND LINE — Violations Over Time
+    # ===============================
+    st.subheader("📆 Violation Trend Over Time")
 
-    zone_df = data.groupby("zone")["count"].sum().reset_index()
+    trend = df.groupby("date").size().reset_index(name="count")
 
-    pie = (
-        alt.Chart(zone_df)
-        .mark_arc()
-        .encode(
-            theta="count:Q",
-            color="zone:N",
-            tooltip=["zone", "count"]
-        )
+    trend_fig = px.line(
+        trend,
+        x="date",
+        y="count",
+        markers=True,
+        title="Violations vs Time",
+        color_discrete_sequence=["cyan"]
     )
-    st.altair_chart(pie, use_container_width=True)
+
+    st.plotly_chart(trend_fig, use_container_width=True)
 
     st.markdown("---")
 
-    # -----------------------------
-    # 3. VIOLATION HOTSPOT MAP (FOLIUM)
-    # -----------------------------
-    st.subheader("🔥 Violation Hotspot Heatmap (Mumbai)")
+    # ===============================
+    # TOP 5 VIOLATION BAR CHART
+    # ===============================
+    st.subheader("🏆 Top 5 Frequent Violations")
 
-    m = folium.Map(location=[19.0760, 72.8777], zoom_start=12, tiles="CartoDB dark_matter")
+    top5 = df["label"].value_counts().head(5).reset_index()
+    top5.columns = ["label", "count"]
 
-    # Add heatmap
-    HeatMap(data[["lat", "lon"]].values.tolist(), radius=15).add_to(m)
+    bar_fig = px.bar(
+        top5,
+        x="label",
+        y="count",
+        title="Most Logged Violations",
+        color="label",
+        color_discrete_sequence=px.colors.qualitative.Antique
+    )
 
-    # Add marker for each violation
-    for _, row in data.iterrows():
-        folium.Marker(
-            [row["lat"], row["lon"]],
-            tooltip=f"{row['type']} ({row['count']})",
-            icon=folium.Icon(color="red", icon="info-sign")
-        ).add_to(m)
+    st.plotly_chart(bar_fig, use_container_width=True)
 
-    st_folium(m, height=500, width=700)
+    st.success("📊 Analytics updated successfully!")
 
-    st.markdown("---")
 
-    # -----------------------------
-    # 4. TRAFFIC POLICE NOTES PANEL
-    # -----------------------------
-    st.subheader("📝 Officer Notes")
-    note = st.text_area("Field officer summary", height=120)
-    if st.button("Save Note"):
-        st.success("Note saved successfully (local mode).")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.info("Connect backend → to fetch real traffic logs, violation clusters & maps.")
