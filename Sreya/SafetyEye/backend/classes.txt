@@ -1,0 +1,10 @@
+person
+helmet
+vest
+no_helmet
+face_mask
+boot
+gloves
+vehicle
+sign
+other_equipment
