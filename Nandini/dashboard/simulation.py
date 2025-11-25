@@ -16,7 +16,7 @@ def generate_frame(show_boxes=True):
     img = Image.new("RGB", (700, 450), "white")
     draw = ImageDraw.Draw(img)
 
-    # Generateing random number of worker so there willbe no fixed values
+    # Generateing random number of worker so NO fixed no. of workers
     worker_count = np.random.randint(1, 6)
 
     # Drawing worker 
