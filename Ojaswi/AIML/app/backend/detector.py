@@ -8,7 +8,7 @@ from datetime import datetime
 import os
 
 # Load your trained YOLO model
-MODEL_PATH = "yolov8s.pt"   # change to "best.pt" if needed
+MODEL_PATH = "model/yolov8s.pt"   # change to "best.pt" if needed
 model = YOLO(MODEL_PATH)
 
 def predict_image(img_path):
