@@ -1,12 +1,11 @@
 import streamlit as st
 import cv2
 import time
-from datetime import datetime
 from pathlib import Path
 import json
 
-# your backend helpers
-from app.backend.detector import predict_frame, save_violation
+# backend helpers
+from app.backend.detector import predict_frame, save_violation, count_people
 from app.backend.utils import generate_pdf
 
 # email alert safe import
@@ -37,7 +36,7 @@ def load_settings():
         "sender": "",
         "receiver": "",
         "app_pass": "",
-        "cooldown_seconds": 8   # default
+        "cooldown_seconds": 8
     }
 
 
@@ -47,17 +46,13 @@ def load_settings():
 def app():
 
     st.subheader("🚨 Live AI Monitoring")
-    st.caption("🛡️ Helmet | Mask | Vest | PPE Violation Detection & Auto Logging / PDF / Email Alert")
+    st.caption("🛡️ PPE Violation Detection | Occupancy | Compliance Score")
 
     if not EMAIL_OK:
         st.warning(f"⚠️ Email alert module not loaded: {EMAIL_ERR}")
 
     settings = load_settings()
-
     cooldown_limit = int(settings.get("cooldown_seconds", 8))
-
-    # Camera option
-    mode = st.radio("📷 Select Camera Source:", ["🎥 Local Webcam"], horizontal=True)
 
     col1, col2 = st.columns([4, 1])
 
@@ -69,30 +64,31 @@ def app():
         frame_placeholder = st.empty()
         alert_box = st.empty()
         fps_box = st.empty()
+        occupancy_box = st.empty()
+        compliance_box = st.empty()
 
-        # Buttons
         start_btn = st.button("▶ Start Detection")
         stop_btn = st.button("⛔ Stop Detection")
 
         running = False
-
         if start_btn:
             running = True
-
         if stop_btn:
             running = False
 
         if running:
 
-            # open webcam
             cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-
             if not cap.isOpened():
                 st.error("❌ Unable to access webcam.")
                 return
 
             last_detect_time = 0
             last_frame_time = time.time()
+
+            # ---------------- COMPLIANCE COUNTERS ----------------
+            total_frames = 0
+            violation_frames = 0
 
             st.success("🟢 Monitoring Started...")
 
@@ -103,6 +99,9 @@ def app():
                     st.error("⚠️ Frame not received.")
                     break
 
+                total_frames += 1
+                violation_in_frame = False
+
                 # YOLO Prediction
                 try:
                     results = predict_frame(frame)
@@ -112,13 +111,26 @@ def app():
 
                 annotated = results.plot()
 
-                # FPS
+                # ---------------- OCCUPANCY ----------------
+                occupancy = count_people(results)
+                occupancy_box.markdown(
+                    f"""
+                    <div style="padding:10px;background:#1d4ed8;color:white;
+                                border-radius:8px;text-align:center;
+                                font-size:18px;font-weight:600;">
+                        👥 Current Occupancy: {occupancy}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                # ---------------- FPS ----------------
                 now = time.time()
                 fps = 1 / (now - last_frame_time)
                 last_frame_time = now
                 fps_box.write(f"📡 FPS: **{fps:.2f}**")
 
-                # Check detections
+                # ---------------- VIOLATION CHECK ----------------
                 for det in results.boxes:
 
                     cls = results.names[int(det.cls[0])]
@@ -127,34 +139,29 @@ def app():
                     if conf < settings["confidence_threshold"]:
                         continue
 
-                    # Cooldown
                     if (now - last_detect_time) < cooldown_limit:
                         continue
 
                     last_detect_time = now
+                    violation_in_frame = True
 
-                    # Save Violation
                     fname, vid, timestamp = save_violation(cls, conf, frame)
 
-                    # PDF
                     pdf_path = None
                     if settings.get("generate_pdf", True):
                         pdf_path = generate_pdf(vid, cls, fname, timestamp, conf)
 
-                    # Email Alert
                     if EMAIL_OK and settings.get("sender") and settings.get("receiver"):
                         try:
                             send_email_alert(
                                 receiver_email=settings["receiver"],
                                 subject=f"🚨 {cls} Violation Detected",
                                 body=f"""
-A violation was detected.
+Violation detected.
 
-📌 Type: {cls}
-⏰ Time: {timestamp}
-🎯 Confidence: {conf:.2f}
-
-PDF report attached if enabled.
+Type: {cls}
+Time: {timestamp}
+Confidence: {conf:.2f}
 """,
                                 attachment_path=pdf_path,
                                 sender_email=settings["sender"],
@@ -164,7 +171,6 @@ PDF report attached if enabled.
                         except Exception as e:
                             alert_box.warning(f"⚠️ Email failed: {e}")
 
-                    # On-screen alert
                     alert_box.markdown(
                         f"""
                         <div style="padding:10px;background:#ef4444;color:white;border-radius:8px;">
@@ -175,7 +181,6 @@ PDF report attached if enabled.
                         unsafe_allow_html=True
                     )
 
-                    # Beep sound
                     if settings.get("audio_alerts", True):
                         beep = "UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA="
                         st.markdown(
@@ -183,10 +188,30 @@ PDF report attached if enabled.
                             unsafe_allow_html=True
                         )
 
-                # Show Stream
+                # ---------------- COMPLIANCE SCORE ----------------
+                if violation_in_frame:
+                    violation_frames += 1
+
+                compliance = (
+                    ((total_frames - violation_frames) / total_frames) * 100
+                    if total_frames > 0 else 100
+                )
+
+                color = "#16a34a" if compliance >= 80 else "#f59e0b" if compliance >= 50 else "#dc2626"
+
+                compliance_box.markdown(
+                    f"""
+                    <div style="padding:10px;background:{color};color:white;
+                                border-radius:8px;text-align:center;
+                                font-size:18px;font-weight:600;">
+                        ✅ Compliance Score: {compliance:.2f}%
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
                 frame_placeholder.image(annotated, channels="BGR")
 
-                # Stop check
                 if st.button("⛔ Stop Detection"):
                     running = False
                     break
@@ -194,9 +219,8 @@ PDF report attached if enabled.
             cap.release()
             st.success("🛑 Monitoring Stopped.")
 
-
     # ============================================
-    # RIGHT SIDE — CONTROLS DISPLAY
+    # RIGHT SIDE — CONTROLS
     # ============================================
     with col2:
         st.markdown("### ⚙️ Detection Controls")
@@ -204,7 +228,7 @@ PDF report attached if enabled.
         st.write(f"🔔 Audio Alerts: `{settings['audio_alerts']}`")
         st.write(f"📄 PDF Auto Generate: `{settings['generate_pdf']}`")
         st.write(f"⏱ Cooldown (s): `{cooldown_limit}`")
-        st.write("---")
-        st.write("### 📧 Email Settings")
+        st.markdown("---")
+        st.markdown("### 📧 Email Settings")
         st.write(f"✉️ Sender: `{settings.get('sender','Not Set')}`")
         st.write(f"📥 Receiver: `{settings.get('receiver','Not Set')}`")

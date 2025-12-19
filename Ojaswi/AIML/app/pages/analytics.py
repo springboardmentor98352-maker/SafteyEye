@@ -13,8 +13,17 @@ def load_data():
     if not csv_path.exists() or csv_path.stat().st_size == 0:
         return pd.DataFrame(columns=["id", "label", "confidence", "image", "timestamp"])
 
-    df = pd.read_csv(csv_path, header=None, names=["id", "label", "confidence", "image", "timestamp"])
-    df["date"] = pd.to_datetime(df["timestamp"]).dt.date
+    df = pd.read_csv(
+        csv_path,
+        header=None,
+        names=["id", "label", "confidence", "image", "timestamp"]
+    )
+
+    # ✅ REQUIRED FOR HEATMAP
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["date"] = df["timestamp"].dt.date
+    df["hour"] = df["timestamp"].dt.hour
+
     return df
 
 
@@ -32,12 +41,25 @@ def app():
         return
 
     # ------------------------------------------------
-    # KPI STYLING (MAKE TEXT WHITE)
+    # KPI STYLING
     # ------------------------------------------------
     st.markdown("""
     <style>
-    .kpi-title { color: #e5e7eb !important; }
-    .kpi-value { color: #ffffff !important; }
+    .kpi-card-dark {
+        background: #111827;
+        padding: 18px;
+        border-radius: 14px;
+        text-align: center;
+    }
+    .kpi-title {
+        color: #e5e7eb;
+        font-size: 14px;
+    }
+    .kpi-value {
+        color: #ffffff;
+        font-size: 26px;
+        font-weight: 700;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -50,79 +72,39 @@ def app():
 
     col1, col2, col3, col4 = st.columns(4)
 
-    with col1:
-        st.markdown(
-            f"""
-            <div class="kpi-card-dark">
-                <div class="kpi-title">Total Violations</div>
-                <div class="kpi-value">{total_violations}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    with col2:
-        st.markdown(
-            f"""
-            <div class="kpi-card-dark">
-                <div class="kpi-title">Today's Violations</div>
-                <div class="kpi-value">{today_count}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    with col3:
-        st.markdown(
-            f"""
-            <div class="kpi-card-dark">
-                <div class="kpi-title">Most Common Type</div>
-                <div class="kpi-value">{most_common}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    with col4:
-        st.markdown(
-            f"""
-            <div class="kpi-card-dark">
-                <div class="kpi-title">Avg Confidence</div>
-                <div class="kpi-value">{avg_conf:.2f}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    for col, title, value in zip(
+        [col1, col2, col3, col4],
+        ["Total Violations", "Today's Violations", "Most Common Type", "Avg Confidence"],
+        [total_violations, today_count, most_common, f"{avg_conf:.2f}"]
+    ):
+        col.markdown(f"""
+        <div class="kpi-card-dark">
+            <div class="kpi-title">{title}</div>
+            <div class="kpi-value">{value}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("---")
 
     # ------------------------------------------------
-    # PIE CHART — Dark Theme Colors
+    # PIE CHART
     # ------------------------------------------------
     st.subheader("📌 Violation Type Distribution")
-
-    dark_palette = ["#1f2937", "#374151", "#4b5563", "#6b7280", "#9ca3af"]
 
     fig_pie = px.pie(
         df,
         names="label",
-        title="Violation Breakdown",
         hole=0.45,
-        color_discrete_sequence=dark_palette
+        color_discrete_sequence=["#1f2937", "#374151", "#4b5563", "#6b7280", "#9ca3af"]
     )
 
-    fig_pie.update_layout(
-        title_font_color="white",
-        legend_font_color="white",
-        font_color="white"
-    )
-
+    fig_pie.update_layout(font_color="white")
     st.plotly_chart(fig_pie, use_container_width=True)
 
     st.markdown("---")
 
     # ------------------------------------------------
-    # TREND LINE — White Line on Dark Background
+    # TREND LINE
     # ------------------------------------------------
     st.subheader("📈 Violations Over Time")
 
@@ -132,26 +114,18 @@ def app():
         trend,
         x="date",
         y="count",
-        markers=True,
-        title="Daily Violation Trend",
-        color_discrete_sequence=["white"]
+        markers=True
     )
 
-    fig_line.update_traces(marker=dict(color="#60a5fa", size=8))  # blue markers
-
-    fig_line.update_layout(
-        title_font_color="white",
-        font_color="white",
-        xaxis_title=None,
-        yaxis_title=None
-    )
+    fig_line.update_traces(marker=dict(color="#60a5fa", size=8))
+    fig_line.update_layout(font_color="white")
 
     st.plotly_chart(fig_line, use_container_width=True)
 
     st.markdown("---")
 
     # ------------------------------------------------
-    # TOP 5 VIOLATION TYPES — Dark Blue Bars
+    # TOP 5 VIOLATION TYPES
     # ------------------------------------------------
     st.subheader("🏆 Top 5 Violation Types")
 
@@ -162,18 +136,41 @@ def app():
         top5,
         x="label",
         y="count",
-        title="Most Frequent Violations",
         color="label",
         color_discrete_sequence=["#60a5fa", "#3b82f6", "#1e40af", "#1e3a8a", "#172554"]
     )
 
-    fig_bar.update_layout(
-        title_font_color="white",
-        legend_font_color="white",
-        font_color="white"
-    )
-
+    fig_bar.update_layout(font_color="white")
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    st.success("📊 Analytics updated successfully!")
+    st.markdown("---")
+
+    # ------------------------------------------------
+    # 🔥 VIOLATION HEATMAP (NEW FEATURE)
+    # ------------------------------------------------
+    st.subheader("🔥 Violation Heatmap (Date vs Hour)")
+
+    heatmap_data = (
+        df.groupby(["date", "hour"])
+        .size()
+        .reset_index(name="count")
+    )
+
+    fig_heatmap = px.density_heatmap(
+        heatmap_data,
+        x="hour",
+        y="date",
+        z="count",
+        color_continuous_scale="inferno"
+    )
+
+    fig_heatmap.update_layout(
+        font_color="white",
+        xaxis_title="Hour of Day",
+        yaxis_title="Date"
+    )
+
+    st.plotly_chart(fig_heatmap, use_container_width=True)
+
+    st.success("📊 Analytics updated successfully with Violation Heatmap!")
 
