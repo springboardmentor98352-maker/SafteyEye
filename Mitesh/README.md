@@ -1,88 +1,69 @@
-# SafetyEye - AI Powered Workplace Safety Monitor
+# SafetyEye: AI-Powered PPE Monitoring System 🛡️
 
-A real-time workplace safety monitoring system that uses computer vision to detect safety violations such as missing PPE (Personal Protective Equipment) and monitor occupancy levels.
+![SafetyEye Banner](https://img.shields.io/badge/AI-Powered-blue) ![Python](https://img.shields.io/badge/Python-3.8+-green) ![YOLOv8](https://img.shields.io/badge/YOLOv8-Object_Detection-orange) ![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-red)
 
-## 🚀 Features
+SafetyEye is an advanced computer vision application designed to enhance workplace safety. It uses state-of-the-art AI (YOLOv8) to monitor Personal Protective Equipment (PPE) compliance in real-time.
 
-- **Real-time Monitoring**: Live video feed with object detection
-- **Safety Violation Detection**: Identify missing PPE (helmets, vests, etc.)
-- **Analytics Dashboard**: Visualize safety metrics and trends
-- **Violation Logs**: Track and manage safety incidents
-- **Exportable Reports**: Generate reports in CSV or Excel format
+## 🚀 Key Features
 
-## 🛠️ Installation
+*   **⚡ Real-Time Detection:** Instantly identifies people and PPE (Hardhats, Masks, Safety Vests).
+*   **🎥 Live Video Analysis:** Connects to standard webcams for continuous monitoring.
+*   **📊 Dynamic Reporting:** Generates real-time analytics, compliance rates, and violation trends.
+*   **💾 Video Processing:** Upload and analyze pre-recorded footage with "Ultra-Fast" processing logic.
+*   **📉 Historical Data:** Automatically saves and organizes detection sessions for review.
+*   **📱 Responsive Dashboard:** A modern, user-friendly interface powered by Streamlit.
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/safetyeye.git
-   cd safetyeye
-   ```
+## 🛠️ Technology Stack
 
-2. **Create a virtual environment (recommended)**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: .\venv\Scripts\activate
-   ```
+*   **Core Engine:** Python 3.8+
+*   **AI Model:** YOLOv8 (Ultralytics)
+*   **Interface:** Streamlit
+*   **Computer Vision:** OpenCV (cv2)
+*   **Visualization:** Plotly, PIL
 
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+## 📦 Installation
 
-4. **Download YOLO model** (or use your own)
-   ```bash
-   wget https://github.com/ultralytics/assets/releases/download/v8.1.0/yolov8s.pt -O models/yolov8s.pt
-   ```
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/yourusername/safetyeye-ppe-monitor.git
+    cd safetyeye-ppe-monitor
+    ```
 
-## 🚦 Running the Application
+2.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-1. **Start the Streamlit app**
-   ```bash
-   streamlit run app.py
-   ```
+3.  **Download the Model:**
+    Ensure you have the `best.pt` model file in the `models/` directory.
 
-2. **Access the dashboard**
-   Open your web browser and navigate to:
-   ```
-   http://localhost:8501
-   ```
+## 🚦 Usage
 
-## 📂 Project Structure
+Run the application with a single command:
 
-```
-safetyeye/
-├── app.py                 # Main application entry point
-├── requirements.txt       # Python dependencies
-├── README.md              # This file
-├── utils/
-│   └── helpers.py         # Helper functions and utilities
-├── pages/
-│   ├── 1_📹_live_monitoring.py  # Live monitoring page
-│   ├── 2_📈_analytics.py        # Analytics dashboard
-│   └── 3_📋_violation_logs.py   # Violation logs
-└── models/                # YOLO model files
+```bash
+streamlit run app_ultra_fast.py
 ```
 
-## 🔌 Integration with YOLO Model
+Navigate to `http://localhost:8501` in your browser.
 
-The application is designed to work with YOLOv8 models. To integrate your own model:
+## 📋 Features in Detail
 
-1. Place your `.pt` model file in the `models/` directory
-2. Update the model path in the Live Monitoring page
-3. Implement the detection logic in `utils/helpers.py`
+### 1. Live Detection
+Connect your webcam to start monitoring. The system draws bounding boxes:
+*   🟢 **Green:** Compliant (PPE Detected)
+*   🔴 **Red:** Violation (Missing PPE)
 
-## 📊 Sample Data
+### 2. Video Analysis
+Upload MP4 or AVI files. The system processes them at accelerated speeds, providing a downloadable analysis report upon completion.
 
-The application includes sample data generation for demonstration purposes. In a production environment, you would connect to your actual data source.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### 3. Results History
+View past sessions, compare compliance rates, and download detailed JSON logs of every detection event.
 
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📧 Contact
+## 📄 License
 
-For any questions or feedback, please contact [your-email@example.com](mailto:your-email@example.com)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
