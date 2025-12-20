@@ -1,0 +1,16 @@
+nc: 10
+names:
+  0: Hardhat
+  1: Mask
+  2: NO_Hardhat
+  3: NO_Mask
+  4: NO_Safety_Vest
+  5: Person
+  6: Safety_Cone
+  7: Safety_Vest
+  8: machinery
+  9: vehicle
+
+train: C:/Users/bindu/Desktop/archive/css-data/train/images
+val: C:/Users/bindu/Desktop/archive/css-data/valid/images
+test: C:/Users/bindu/Desktop/archive/css-data/test/images

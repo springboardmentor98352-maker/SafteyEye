@@ -1,0 +1,32 @@
+# ---- Python / Virtual Environment ----
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ---- Streamlit ----
+.streamlit/
+
+# ---- Build / Distribution (PyInstaller / Executables) ----
+build/
+dist/
+*.spec
+*.exe
+
+# ---- Jupyter ----
+*.ipynb_checkpoints
+
+# ---- Logs / Temporary ----
+*.log
+tmp/
+temp/
+
+# ---- Editor / OS Files ----
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ---- Environment Variables ----
+.env
+*.env
