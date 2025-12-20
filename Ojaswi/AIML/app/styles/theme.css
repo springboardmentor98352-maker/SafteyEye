@@ -1,89 +1,161 @@
-/* -------- Global Font -------- */
+/* ============================
+   GLOBAL DARK THEME (RED ACCENT)
+============================ */
 * {
     font-family: 'Segoe UI', sans-serif;
+    color: #e5e7eb !important;
 }
 
-/* -------- App Background -------- */
 body {
-    background: #eef2f7;
+    background: #0d1117 !important;
 }
 
-/* -------- Header Box -------- */
-.header-container {
-    background: rgba(255, 255, 255, 0.85);
-    padding: 18px 25px;
+/* ============================
+   NAVBAR — RED ALERT STYLE
+============================ */
+.dark-navbar {
+    background: #161b22;
+    padding: 20px 25px;
     border-radius: 12px;
-    border-left: 6px solid #1d4ed8;
+    border-left: 5px solid #3b82f6 ; /* RED */
     margin-bottom: 1.2rem;
-    backdrop-filter: blur(6px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    font-weight: 600;
+    box-shadow: 0 0 10px rgba(239,68,68,0.20);
 }
 
-/* -------- Sidebar -------- */
+.dark-navbar h2 {
+    margin: 0;
+    color:  #3b82f6  !important; /* RED */
+}
+
+.dark-navbar p {
+    margin: 3px 0 0;
+    color: #3b82f6 !important;
+}
+
+/* ============================
+   SIDEBAR DARK MODE + BIG FONT
+============================ */
 [data-testid="stSidebar"] {
-    background: #ffffff !important;
-    border-right: 1px solid #d6d6d6;
+    background-color: #0d1117 !important;
+    border-right: 1px solid #30363d !important;
+    padding: 20px !important;
 }
 
-/* -------- KPI Cards -------- */
-.kpi-box {
-    background: white;
-    padding: 18px;
-    border-radius: 12px;
-    border: 1px solid #d4dae5;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    text-align: center;
-    transition: 0.25s;
+.sidebar-title {
+    font-size: 22px !important;
+    color: #4743bd !important; /* RED */
+    font-weight: 600 !important;
+    margin-bottom: 10px !important;
 }
 
-.kpi-box:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+/* Radio group container */
+.stRadio > div {
+    gap: 12px !important;
 }
 
-/* -------- Table Styling -------- */
-.dataframe {
-    border-radius: 10px;
-    overflow: hidden;
+/* Each radio option */
+.stRadio label {
+    font-size: 18px !important;
+    font-weight: 500 !important;
+    color: #e5e7eb !important;
+    padding: 8px 5px !important;
 }
 
-/* -------- Buttons -------- */
-.stButton>button {
-    background: #1d4ed8 !important;
+/* Radio bullet */
+.stRadio div[role="radiogroup"] > label > div:first-child {
+    width: 20px !important;
+    height: 20px !important;
+    border: 2px solid #ef4444 !important; /* RED */
+    background: transparent !important;
+}
+
+/* Selected bullet */
+.stRadio div[role="radiogroup"] > label > div[aria-checked="true"] {
+    background-color: #ef4444 !important; /* RED */
+    border-color: #ef4444 !important;
+}
+
+/* Remove extra space */
+.stRadio {
+    margin-top: 10px !important;
+}
+
+/* ============================
+   BUTTONS — RED ALERT
+============================ */
+.stButton > button {
+    background: #ef4444 !important;
     color: white !important;
     border-radius: 8px !important;
     padding: 10px 18px !important;
     border: none !important;
-    transition: 0.3s !important;
-    font-weight: 500;
 }
 
-.stButton>button:hover {
-    background: #0f3bb4 !important;
+.stButton > button:hover {
+    background: #dc2626 !important;
     transform: scale(1.03);
 }
 
-/* -------- Alert Box (Success / Warning UI) -------- */
-.alert-box {
-    padding: 10px;
+/* ============================
+   KPI CARDS — DARK + RED STYLE
+============================ */
+.kpi-card-dark {
+    background: #161b22;
+    border: 1px solid #2a2f37;
+    padding: 18px;
     border-radius: 10px;
-    font-weight: 500;
-    color: white;
+    margin-bottom: 15px;
 }
 
-/* error */
-.error {
-    background: #b91c1c;
+.kpi-title {
+    font-size: 14px;
+    color: #9ca3af !important;
+    margin-bottom: 4px;
 }
 
-/* success */
-.success {
-    background: #15803d;
+.kpi-value {
+    font-size: 26px;
+    font-weight: 600;
+    color: #ef4444 !important; /* RED */
 }
 
-/* warning */
-.warning {
-    background: #f59e0b;
-    color: black;
+/* ============================
+   REMOVE WHITE BACKGROUND FROM DATAFRAMES
+============================ */
+.dataframe {
+    background-color: #161b22 !important;
+    color: #e5e7eb !important;
+}
+
+thead th {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+}
+
+tbody td {
+    background-color: #161b22 !important;
+}
+
+tbody tr:hover td {
+    background-color: #1f2937 !important;
+}
+
+/* ============================
+   SCROLLBAR DARK MODE
+============================ */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0d1117;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #ef4444;
 }

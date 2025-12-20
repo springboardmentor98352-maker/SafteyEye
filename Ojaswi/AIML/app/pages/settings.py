@@ -1,85 +1,99 @@
 import streamlit as st
 import json
 from pathlib import Path
-import os
 
 SETTINGS_FILE = Path("database/settings.json")
 
 
-# -------------------------
-# Load & Save Settings
-# -------------------------
-
+# ------------------------------
+# Load Settings
+# ------------------------------
 def load_settings():
-    if not SETTINGS_FILE.exists():
-        return {
-            "confidence_threshold": 0.35,
-            "audio_alerts": True,
-            "generate_pdf": True
-        }
-    return json.loads(SETTINGS_FILE.read_text())
+    if SETTINGS_FILE.exists():
+        try:
+            return json.loads(SETTINGS_FILE.read_text())
+        except:
+            pass
+
+    return {
+        "confidence_threshold": 0.35,
+        "audio_alerts": True,
+        "generate_pdf": True,
+        "sender": "",
+        "receiver": "",
+        "app_pass": ""
+    }
 
 
-def save_settings(settings):
-    SETTINGS_FILE.write_text(json.dumps(settings, indent=4))
+# ------------------------------
+# Save Settings
+# ------------------------------
+def save_settings(data):
+    try:
+        SETTINGS_FILE.write_text(json.dumps(data, indent=4))
+        return True
+    except:
+        return False
 
 
-# -------------------------
-# Clear Data Helper
-# -------------------------
-
-def clear_all_data():
-    db_folder = Path("database")
-    for file in db_folder.glob("*"):
-        if file.name != "settings.json":  # don't delete settings
-            file.unlink()
-
-
-# -------------------------
-# MAIN PAGE UI
-# -------------------------
+# ------------------------------
+# Streamlit Page
+# ------------------------------
 def app():
-    st.subheader("⚙️ Application Settings")
+
+    st.subheader("⚙ Settings")
+    st.caption("Update detection sensitivity, PDF, alerts & email configuration")
 
     settings = load_settings()
 
-    # ---- UI Controls ----
-    st.markdown("### 🔧 Detection Preferences")
+    # --------------------------
+    # Detection Settings
+    # --------------------------
+    st.markdown("### 🎯 Detection Settings")
 
-    # Confidence Setting
-    new_conf = st.slider(
-        "Minimum Detection Confidence",
-        min_value=0.2,
-        max_value=1.0,
-        step=0.05,
-        value=settings["confidence_threshold"]
+    confidence = st.slider(
+        "Confidence Threshold",
+        0.10, 1.00,
+        settings.get("confidence_threshold", 0.35),
+        step=0.01
     )
 
-    # Toggle Controls
-    audio = st.checkbox("Enable Audio Alerts 🔊", value=settings["audio_alerts"])
-    make_pdf = st.checkbox("Auto-Generate Violation PDF 📄", value=settings["generate_pdf"])
+    audio_alerts = st.checkbox(
+        "Enable Audio Alerts",
+        settings.get("audio_alerts", True)
+    )
 
+    generate_pdf = st.checkbox(
+        "Generate PDF Reports Automatically",
+        settings.get("generate_pdf", True)
+    )
+
+    # --------------------------
+    # Email Settings
+    # --------------------------
+    st.markdown("### 📧 Email Alert Configuration")
+
+    sender = st.text_input("Sender Email (Gmail)", settings.get("sender", ""))
+    receiver = st.text_input("Receiver Email", settings.get("receiver", ""))
+    app_pass = st.text_input("App Password", settings.get("app_pass", ""), type="password")
+
+    # --------------------------
     # Save Button
+    # --------------------------
     if st.button("💾 Save Settings"):
-        settings["confidence_threshold"] = new_conf
-        settings["audio_alerts"] = audio
-        settings["generate_pdf"] = make_pdf
-        save_settings(settings)
-        st.success("✅ Settings Updated")
+        new_data = {
+            "confidence_threshold": confidence,
+            "audio_alerts": audio_alerts,
+            "generate_pdf": generate_pdf,
+            "sender": sender,
+            "receiver": receiver,
+            "app_pass": app_pass
+        }
 
-    st.markdown("---")
-    st.subheader("🧹 Maintenance Tools")
-
-    # ---- CLEAR DATABASE ----
-    if st.button("🗑 Clear All Violation Records"):
-        clear_all_data()
-        st.warning("⚠️ All violation images, logs & PDFs deleted!")
-
-    # Reset system
-    if st.button("🔄 Reset System to Default"):
-        SETTINGS_FILE.unlink(missing_ok=True)
-        st.success("System Reset — Restart App to Apply Changes.")
+        if save_settings(new_data):
+            st.success("✅ Settings Saved Successfully")
+        else:
+            st.error("❌ Failed to save settings")
 
 
-    st.markdown("---")
-    st.info("💡 Settings are stored permanently and will apply across all sessions.")
+    st.info("These settings affect Live Monitor & Email alerts.")

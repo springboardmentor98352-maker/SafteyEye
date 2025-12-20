@@ -1,128 +1,186 @@
 import streamlit as st
 import cv2
 import time
-from datetime import datetime
 from pathlib import Path
 import json
 
-from app.backend.detector import predict_frame, save_violation
+# backend helpers
+from app.backend.detector import predict_frame, save_violation, count_people
 from app.backend.utils import generate_pdf
+
+# email alert safe import
 try:
     from app.backend.email_alert import send_email_alert
-except:
-    st.error("❌ Missing file: app/backend/email_alert.py")
+    EMAIL_OK = True
+except Exception as e:
+    EMAIL_OK = False
+    EMAIL_ERR = str(e)
 
 
-
-# Load stored settings
+# ==============================================
+# Load Settings
+# ==============================================
 def load_settings():
-    settings_file = Path("database/settings.json")
-    if settings_file.exists():
-        return json.loads(settings_file.read_text())
+    file = Path("database/settings.json")
+
+    if file.exists():
+        try:
+            return json.loads(file.read_text())
+        except:
+            pass
+
     return {
         "confidence_threshold": 0.35,
         "audio_alerts": True,
         "generate_pdf": True,
         "sender": "",
         "receiver": "",
-        "app_pass": ""
+        "app_pass": "",
+        "cooldown_seconds": 8
     }
 
 
+# ==============================================
+# Streamlit Page
+# ==============================================
 def app():
 
     st.subheader("🚨 Live AI Monitoring")
-    st.caption("Helmet | Mask | Vest | PPE Violation Detection & Auto Logging / PDF / Email Alert")
+    st.caption("🛡️ PPE Violation Detection | Occupancy | Compliance Score")
+
+    if not EMAIL_OK:
+        st.warning(f"⚠️ Email alert module not loaded: {EMAIL_ERR}")
 
     settings = load_settings()
-
-    mode = st.radio("Camera Source:", ["Local Webcam", "RTSP / IP Camera"], horizontal=True)
-
-    rtsp_url = None
-    if mode == "RTSP / IP Camera":
-        rtsp_url = st.text_input("Enter RTSP Stream URL:", "rtsp://")
+    cooldown_limit = int(settings.get("cooldown_seconds", 8))
 
     col1, col2 = st.columns([4, 1])
 
-    # ----------------------------- Left Panel: Live Feed -----------------------------
-
+    # ============================================
+    # LEFT SIDE — LIVE FEED
+    # ============================================
     with col1:
-        st_frame = st.empty()
+
+        frame_placeholder = st.empty()
         alert_box = st.empty()
-        fps_display = st.empty()
+        fps_box = st.empty()
+        occupancy_box = st.empty()
+        compliance_box = st.empty()
 
         start_btn = st.button("▶ Start Detection")
-        stop_btn = st.button("⛔ Stop")
+        stop_btn = st.button("⛔ Stop Detection")
 
-        if start_btn and not stop_btn:
+        running = False
+        if start_btn:
+            running = True
+        if stop_btn:
+            running = False
 
-            source = 0 if mode == "Local Webcam" else rtsp_url
-            cap = cv2.VideoCapture(source)
-            prev_time = time.time()
+        if running:
 
-            while True:
+            cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            if not cap.isOpened():
+                st.error("❌ Unable to access webcam.")
+                return
+
+            last_detect_time = 0
+            last_frame_time = time.time()
+
+            # ---------------- COMPLIANCE COUNTERS ----------------
+            total_frames = 0
+            violation_frames = 0
+
+            st.success("🟢 Monitoring Started...")
+
+            while running:
+
                 ret, frame = cap.read()
                 if not ret:
-                    st.error("❌ Camera not accessible")
+                    st.error("⚠️ Frame not received.")
                     break
 
-                results = predict_frame(frame)
+                total_frames += 1
+                violation_in_frame = False
+
+                # YOLO Prediction
+                try:
+                    results = predict_frame(frame)
+                except Exception as e:
+                    st.error(f"❌ Model error: {e}")
+                    break
+
                 annotated = results.plot()
 
-                # FPS Calculation
-                curr_time = time.time()
-                fps = 1 / (curr_time - prev_time)
-                prev_time = curr_time
-                fps_display.write(f"🎥 FPS: {fps:.2f}")
+                # ---------------- OCCUPANCY ----------------
+                occupancy = count_people(results)
+                occupancy_box.markdown(
+                    f"""
+                    <div style="padding:10px;background:#1d4ed8;color:white;
+                                border-radius:8px;text-align:center;
+                                font-size:18px;font-weight:600;">
+                        👥 Current Occupancy: {occupancy}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
-                # ------------------- Scan detections -------------------
+                # ---------------- FPS ----------------
+                now = time.time()
+                fps = 1 / (now - last_frame_time)
+                last_frame_time = now
+                fps_box.write(f"📡 FPS: **{fps:.2f}**")
+
+                # ---------------- VIOLATION CHECK ----------------
                 for det in results.boxes:
+
                     cls = results.names[int(det.cls[0])]
                     conf = float(det.conf[0])
 
-                    # Check confidence threshold (from Settings)
                     if conf < settings["confidence_threshold"]:
                         continue
 
-                    # Save violation
+                    if (now - last_detect_time) < cooldown_limit:
+                        continue
+
+                    last_detect_time = now
+                    violation_in_frame = True
+
                     fname, vid, timestamp = save_violation(cls, conf, frame)
 
-                    # ------------------- Generate PDF if enabled -------------------
                     pdf_path = None
                     if settings.get("generate_pdf", True):
                         pdf_path = generate_pdf(vid, cls, fname, timestamp, conf)
 
-                    # ------------------- Email Alert if configured -------------------
-                    if settings.get("receiver") and settings.get("sender") and settings.get("app_pass"):
-                        send_email_alert(
-                            receiver_email=settings["receiver"],
-                            subject=f"🚨 {cls} Violation Detected",
-                            body=f"""
-A violation was detected.
+                    if EMAIL_OK and settings.get("sender") and settings.get("receiver"):
+                        try:
+                            send_email_alert(
+                                receiver_email=settings["receiver"],
+                                subject=f"🚨 {cls} Violation Detected",
+                                body=f"""
+Violation detected.
 
-📌 Type: {cls}
-📆 Time: {timestamp}
-🎯 Confidence: {conf:.2f}
+Type: {cls}
+Time: {timestamp}
+Confidence: {conf:.2f}
+""",
+                                attachment_path=pdf_path,
+                                sender_email=settings["sender"],
+                                app_password=settings["app_pass"]
+                            )
+                            alert_box.success("📧 Email sent successfully!")
+                        except Exception as e:
+                            alert_box.warning(f"⚠️ Email failed: {e}")
 
-PDF report attached if enabled.
-                            """,
-                            attachment_path=pdf_path,
-                            sender_email=settings["sender"],
-                            app_password=settings["app_pass"]
-                        )
-
-                    # ------------------- Live UI Alert -------------------
                     alert_box.markdown(
                         f"""
-                        <div style="padding:10px;border-radius:8px;background:#ff0033;color:white;">
-                        🚨 <strong>{cls}</strong> detected (Confidence: {conf:.2f}) <br>
-                        Logged at {timestamp}
+                        <div style="padding:10px;background:#ef4444;color:white;border-radius:8px;">
+                        🚨 <b>{cls}</b> detected — Confidence {conf:.2f}<br>
+                        📅 Logged at {timestamp}
                         </div>
                         """,
                         unsafe_allow_html=True
                     )
 
-                    # ------------------- Play Beep if enabled -------------------
                     if settings.get("audio_alerts", True):
                         beep = "UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA="
                         st.markdown(
@@ -130,29 +188,47 @@ PDF report attached if enabled.
                             unsafe_allow_html=True
                         )
 
-                # Stream
-                st_frame.image(annotated, channels="BGR")
+                # ---------------- COMPLIANCE SCORE ----------------
+                if violation_in_frame:
+                    violation_frames += 1
 
-                if stop_btn:
+                compliance = (
+                    ((total_frames - violation_frames) / total_frames) * 100
+                    if total_frames > 0 else 100
+                )
+
+                color = "#16a34a" if compliance >= 80 else "#f59e0b" if compliance >= 50 else "#dc2626"
+
+                compliance_box.markdown(
+                    f"""
+                    <div style="padding:10px;background:{color};color:white;
+                                border-radius:8px;text-align:center;
+                                font-size:18px;font-weight:600;">
+                        ✅ Compliance Score: {compliance:.2f}%
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                frame_placeholder.image(annotated, channels="BGR")
+
+                if st.button("⛔ Stop Detection"):
+                    running = False
                     break
 
             cap.release()
-            st.success("🛑 Detection stopped.")
+            st.success("🛑 Monitoring Stopped.")
 
-
-    # ----------------------------- Right Panel Controls -----------------------------
-
+    # ============================================
+    # RIGHT SIDE — CONTROLS
+    # ============================================
     with col2:
-        st.markdown("### ⚙ Detection Controls")
-        st.write(f"📍 Confidence Threshold: `{settings['confidence_threshold']}`")
-        st.write(f"🔔 Alerts Enabled: `{settings['audio_alerts']}`")
-        st.write(f"📄 PDF Auto-Generate: `{settings['generate_pdf']}`")
-        st.write("---")
-        st.write("📧 Email Notifications:")
-        st.write(f"Sender: `{settings.get('sender','Not Set')}`")
-        st.write(f"Receiver: `{settings.get('receiver','Not Set')}`")
-
-
-    st.markdown("---")
-    st.info("Violations will appear automatically on the Reports page.")
-
+        st.markdown("### ⚙️ Detection Controls")
+        st.write(f"🎯 Confidence Threshold: `{settings['confidence_threshold']}`")
+        st.write(f"🔔 Audio Alerts: `{settings['audio_alerts']}`")
+        st.write(f"📄 PDF Auto Generate: `{settings['generate_pdf']}`")
+        st.write(f"⏱ Cooldown (s): `{cooldown_limit}`")
+        st.markdown("---")
+        st.markdown("### 📧 Email Settings")
+        st.write(f"✉️ Sender: `{settings.get('sender','Not Set')}`")
+        st.write(f"📥 Receiver: `{settings.get('receiver','Not Set')}`")
