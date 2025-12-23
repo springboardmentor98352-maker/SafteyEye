@@ -7,12 +7,15 @@ import time
 from email_alert import send_email_alert
 from PIL import Image
 import pandas as pd
+import os
 
 # ---------------------------
 # Load Model
 # ---------------------------
 MODEL_PATH = "runs/detect/construction_ppe_model/weights/best.pt"
 model = YOLO(MODEL_PATH)
+
+CSV_FILE = "violation_logs.csv"
 
 # ---------------------------
 # Session State Init
@@ -21,7 +24,11 @@ if "last_email_time" not in st.session_state:
     st.session_state.last_email_time = 0
 
 if "violation_log" not in st.session_state:
-    st.session_state.violation_log = []
+    # Load existing CSV data if available
+    if os.path.exists(CSV_FILE):
+        st.session_state.violation_log = pd.read_csv(CSV_FILE).to_dict("records")
+    else:
+        st.session_state.violation_log = []
 
 EMAIL_INTERVAL = 60  # seconds
 
@@ -79,6 +86,10 @@ def log_and_alert(violations):
             "Time": timestamp,
             "Violations": ", ".join(violations)
         })
+
+        # Save to CSV (PERMANENT STORAGE)
+        df = pd.DataFrame(st.session_state.violation_log)
+        df.to_csv(CSV_FILE, index=False)
 
         # Email cooldown
         if current_time - st.session_state.last_email_time > EMAIL_INTERVAL:
@@ -202,10 +213,9 @@ if st.session_state.violation_log:
     time_series = df.groupby("Time").size()
     st.line_chart(time_series)
 
-    csv = df.to_csv(index=False).encode("utf-8")
     st.download_button(
         "⬇️ Download Violation Logs (CSV)",
-        csv,
+        df.to_csv(index=False).encode("utf-8"),
         "safety_violation_logs.csv",
         "text/csv"
     )
