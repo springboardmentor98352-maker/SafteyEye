@@ -3,7 +3,10 @@ from ultralytics import YOLO
 import cv2
 import numpy as np
 import tempfile
+import time
+from email_alert import send_email_alert
 from PIL import Image
+import pandas as pd
 
 # ---------------------------
 # Load Model
@@ -11,7 +14,20 @@ from PIL import Image
 MODEL_PATH = "runs/detect/construction_ppe_model/weights/best.pt"
 model = YOLO(MODEL_PATH)
 
-# Class names (from your data.yaml)
+# ---------------------------
+# Session State Init
+# ---------------------------
+if "last_email_time" not in st.session_state:
+    st.session_state.last_email_time = 0
+
+if "violation_log" not in st.session_state:
+    st.session_state.violation_log = []
+
+EMAIL_INTERVAL = 60  # seconds
+
+# ---------------------------
+# Class Info
+# ---------------------------
 CLASS_NAMES = [
     "Hardhat", "Mask", "NO-Hardhat", "NO-Mask", "NO-Safety Vest",
     "Person", "Safety Cone", "Safety Vest", "machinery", "vehicle"
@@ -27,9 +43,8 @@ VIOLATION_CLASSES = {
 # Streamlit UI Setup
 # ---------------------------
 st.set_page_config(page_title="SafetyEye PPE Detection", layout="wide")
-
-st.title("🦺 SafetyEye – PPE Detection System")
-st.write("Upload an image/video or use webcam to detect PPE compliance.")
+st.title("🦺 SafetyEye – PPE Detection & Safety Analytics System")
+st.write("AI-powered system to detect PPE violations with alerts and analytics.")
 
 option = st.sidebar.selectbox(
     "Select Mode",
@@ -39,12 +54,11 @@ option = st.sidebar.selectbox(
 conf_threshold = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.35)
 
 # ---------------------------
-# Helper: Draw Boxes + Violations
+# Helper Functions
 # ---------------------------
 def annotate_image(result):
     img = result.plot()
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    return img
+    return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 def check_violations(result):
     violations = []
@@ -55,6 +69,22 @@ def check_violations(result):
                 violations.append(VIOLATION_CLASSES[cls])
     return violations
 
+def log_and_alert(violations):
+    current_time = time.time()
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    if violations:
+        # Log violation
+        st.session_state.violation_log.append({
+            "Time": timestamp,
+            "Violations": ", ".join(violations)
+        })
+
+        # Email cooldown
+        if current_time - st.session_state.last_email_time > EMAIL_INTERVAL:
+            send_email_alert(", ".join(violations))
+            st.session_state.last_email_time = current_time
+
 # ---------------------------
 # IMAGE MODE
 # ---------------------------
@@ -63,21 +93,22 @@ if option == "Image Detection":
 
     uploaded = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
 
-    if uploaded is not None:
+    if uploaded:
         img = Image.open(uploaded)
         st.image(img, caption="Uploaded Image", width=500)
 
         img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-
         results = model.predict(img_cv, conf=conf_threshold)
+
         annotated = annotate_image(results[0])
         violations = check_violations(results[0])
+        log_and_alert(violations)
 
         st.subheader("🔍 Detection Result")
         st.image(annotated, use_column_width=True)
 
-        if len(violations) > 0:
-            st.error("⚠️ Violations Detected:")
+        if violations:
+            st.error("⚠️ Violations Detected")
             for v in violations:
                 st.write("- " + v)
         else:
@@ -91,46 +122,42 @@ elif option == "Video Detection":
 
     uploaded_video = st.file_uploader("Upload a video", type=["mp4", "avi", "mov"])
 
-    if uploaded_video is not None:
+    if uploaded_video:
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(uploaded_video.read())
 
-        st.info("Processing video... please wait ⏳")
+        st.info("Processing video...")
 
         cap = cv2.VideoCapture(tfile.name)
-        output_frames = []
+        last_result = None
 
-        while True:
+        while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
-
             results = model.predict(frame, conf=conf_threshold, verbose=False)
-            annotated = results[0].plot()
-            annotated_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
-            output_frames.append(annotated_rgb)
+            last_result = results[0]
 
         cap.release()
 
-        st.success("Video Processed 🎉")
-        st.write("Showing first frame below:")
-        st.image(output_frames[0], use_column_width=True)
+        if last_result:
+            annotated = annotate_image(last_result)
+            violations = check_violations(last_result)
+            log_and_alert(violations)
 
-        st.warning("⚠️ Full video rendering can be added if you want.")
+            st.success("Video Processed Successfully")
+            st.image(annotated, use_column_width=True)
 
 # ---------------------------
 # WEBCAM MODE
 # ---------------------------
 elif option == "Webcam (Live Detection)":
     st.header("🎥 Webcam Live PPE Detection")
-
-    st.warning("Webcam may not work inside some Jupyter environments. Better run using command line.")
+    st.warning("Run from terminal. Press Q to quit webcam window.")
 
     run_webcam = st.button("Start Webcam")
 
     if run_webcam:
-        st.info("Opening webcam... press Q in the window to quit")
-
         cap = cv2.VideoCapture(0)
 
         while cap.isOpened():
@@ -140,10 +167,47 @@ elif option == "Webcam (Live Detection)":
 
             results = model.predict(frame, conf=conf_threshold, verbose=False)
             annotated = results[0].plot()
+            violations = check_violations(results[0])
+            log_and_alert(violations)
 
-            cv2.imshow("SafetyEye Live", annotated)
+            cv2.imshow("SafetyEye Live Detection", annotated)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
         cap.release()
         cv2.destroyAllWindows()
+
+# ---------------------------
+# DASHBOARD & ANALYTICS
+# ---------------------------
+st.markdown("---")
+st.header("📊 Safety Compliance Analytics")
+
+if st.session_state.violation_log:
+    df = pd.DataFrame(st.session_state.violation_log)
+
+    st.subheader("🗂 Violation Logs")
+    st.dataframe(df)
+
+    st.subheader("📈 Violation Distribution")
+    violation_counts = (
+        df["Violations"]
+        .str.split(", ")
+        .explode()
+        .value_counts()
+    )
+    st.bar_chart(violation_counts)
+
+    st.subheader("📉 Violation Trend Over Time")
+    time_series = df.groupby("Time").size()
+    st.line_chart(time_series)
+
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "⬇️ Download Violation Logs (CSV)",
+        csv,
+        "safety_violation_logs.csv",
+        "text/csv"
+    )
+else:
+    st.info("No violations recorded yet.")
