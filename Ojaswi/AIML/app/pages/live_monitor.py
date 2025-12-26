@@ -22,13 +22,11 @@ except Exception as e:
 # ==============================================
 def load_settings():
     file = Path("database/settings.json")
-
     if file.exists():
         try:
             return json.loads(file.read_text())
         except:
             pass
-
     return {
         "confidence_threshold": 0.35,
         "audio_alerts": True,
@@ -85,15 +83,12 @@ def app():
 
             last_detect_time = 0
             last_frame_time = time.time()
-
-            # ---------------- COMPLIANCE COUNTERS ----------------
             total_frames = 0
             violation_frames = 0
 
             st.success("🟢 Monitoring Started...")
 
             while running:
-
                 ret, frame = cap.read()
                 if not ret:
                     st.error("⚠️ Frame not received.")
@@ -132,7 +127,6 @@ def app():
 
                 # ---------------- VIOLATION CHECK ----------------
                 for det in results.boxes:
-
                     cls = results.names[int(det.cls[0])]
                     conf = float(det.conf[0])
 
@@ -192,11 +186,7 @@ Confidence: {conf:.2f}
                 if violation_in_frame:
                     violation_frames += 1
 
-                compliance = (
-                    ((total_frames - violation_frames) / total_frames) * 100
-                    if total_frames > 0 else 100
-                )
-
+                compliance = ((total_frames - violation_frames) / total_frames) * 100 if total_frames > 0 else 100
                 color = "#16a34a" if compliance >= 80 else "#f59e0b" if compliance >= 50 else "#dc2626"
 
                 compliance_box.markdown(

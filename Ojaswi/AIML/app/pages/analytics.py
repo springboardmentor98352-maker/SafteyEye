@@ -10,19 +10,32 @@ from pathlib import Path
 def load_data():
     csv_path = Path("database/violations_log.csv")
 
+    # Return empty DataFrame if CSV missing or empty
     if not csv_path.exists() or csv_path.stat().st_size == 0:
         return pd.DataFrame(columns=["id", "label", "confidence", "image", "timestamp"])
 
+    # Read CSV forcing column names (safe if CSV has no header)
     df = pd.read_csv(
         csv_path,
         header=None,
         names=["id", "label", "confidence", "image", "timestamp"]
     )
 
-    # ✅ REQUIRED FOR HEATMAP
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
-    df["date"] = df["timestamp"].dt.date
-    df["hour"] = df["timestamp"].dt.hour
+    # Convert confidence to numeric
+    df["confidence"] = pd.to_numeric(df["confidence"], errors="coerce")
+    df = df.dropna(subset=["confidence"])
+
+    # ---------------- Convert timestamp to datetime safely ----------------
+    if "timestamp" in df.columns:
+        df["timestamp"] = df["timestamp"].astype(str).str.strip()
+        df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce", dayfirst=True)
+        df = df.dropna(subset=["timestamp"])
+
+        df["date"] = df["timestamp"].dt.date
+        df["hour"] = df["timestamp"].dt.hour
+    else:
+        df["date"] = pd.NaT
+        df["hour"] = pd.NaT
 
     return df
 
@@ -67,8 +80,8 @@ def app():
     total_violations = len(df)
     today = pd.Timestamp.today().date()
     today_count = len(df[df["date"] == today])
-    avg_conf = df["confidence"].mean()
-    most_common = df["label"].value_counts().idxmax()
+    avg_conf = df["confidence"].mean() if not df["confidence"].empty else 0
+    most_common = df["label"].value_counts().idxmax() if not df["label"].empty else "N/A"
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -90,14 +103,12 @@ def app():
     # PIE CHART
     # ------------------------------------------------
     st.subheader("📌 Violation Type Distribution")
-
     fig_pie = px.pie(
         df,
         names="label",
         hole=0.45,
         color_discrete_sequence=["#1f2937", "#374151", "#4b5563", "#6b7280", "#9ca3af"]
     )
-
     fig_pie.update_layout(font_color="white")
     st.plotly_chart(fig_pie, use_container_width=True)
 
@@ -107,19 +118,15 @@ def app():
     # TREND LINE
     # ------------------------------------------------
     st.subheader("📈 Violations Over Time")
-
     trend = df.groupby("date").size().reset_index(name="count")
-
     fig_line = px.line(
         trend,
         x="date",
         y="count",
         markers=True
     )
-
     fig_line.update_traces(marker=dict(color="#60a5fa", size=8))
     fig_line.update_layout(font_color="white")
-
     st.plotly_chart(fig_line, use_container_width=True)
 
     st.markdown("---")
@@ -128,10 +135,8 @@ def app():
     # TOP 5 VIOLATION TYPES
     # ------------------------------------------------
     st.subheader("🏆 Top 5 Violation Types")
-
     top5 = df["label"].value_counts().head(5).reset_index()
     top5.columns = ["label", "count"]
-
     fig_bar = px.bar(
         top5,
         x="label",
@@ -139,7 +144,6 @@ def app():
         color="label",
         color_discrete_sequence=["#60a5fa", "#3b82f6", "#1e40af", "#1e3a8a", "#172554"]
     )
-
     fig_bar.update_layout(font_color="white")
     st.plotly_chart(fig_bar, use_container_width=True)
 
@@ -149,13 +153,7 @@ def app():
     # 🔥 VIOLATION HEATMAP (NEW FEATURE)
     # ------------------------------------------------
     st.subheader("🔥 Violation Heatmap (Date vs Hour)")
-
-    heatmap_data = (
-        df.groupby(["date", "hour"])
-        .size()
-        .reset_index(name="count")
-    )
-
+    heatmap_data = df.groupby(["date", "hour"]).size().reset_index(name="count")
     fig_heatmap = px.density_heatmap(
         heatmap_data,
         x="hour",
@@ -163,14 +161,11 @@ def app():
         z="count",
         color_continuous_scale="inferno"
     )
-
     fig_heatmap.update_layout(
         font_color="white",
         xaxis_title="Hour of Day",
         yaxis_title="Date"
     )
-
     st.plotly_chart(fig_heatmap, use_container_width=True)
 
     st.success("📊 Analytics updated successfully with Violation Heatmap!")
-

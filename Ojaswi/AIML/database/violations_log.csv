@@ -1,4 +1,4 @@
-f2149e7b,person,0.9070702195167542,violations/f2149e7b.jpg,2025-11-25 13:56:40
+id,label,confidence,image,timestamp
 086c891c,person,0.9113994240760803,violations/086c891c.jpg,2025-11-25 13:56:42
 0d8055dd,person,0.8976008892059326,violations/0d8055dd.jpg,2025-11-25 13:56:44
 7715c263,person,0.894912600517273,violations/7715c263.jpg,2025-11-25 13:56:46
@@ -96,3 +96,36 @@ ee77d6ee,person,0.9088742733001709,violations/ee77d6ee.jpg,2025-12-05 10:15:43
 20261d6a,person,0.8863682746887207,violations/20261d6a.jpg,2025-12-05 10:20:13
 0bc57bf2,person,0.8849963545799255,violations/0bc57bf2.jpg,2025-12-19 18:45:54
 968f9fc5,person,0.9048116207122803,violations/968f9fc5.jpg,2025-12-19 18:49:51
+8bf389e3,person,0.8407080769538879,violations/8bf389e3.jpg,2025-12-19 19:23:09
+8b3f51b5,person,0.9283775687217712,violations/8b3f51b5.jpg,2025-12-20 10:11:36
+06c401d5,person,0.909100353717804,violations/06c401d5.jpg,2025-12-20 10:12:59
+03ea2c3f,airplane,0.9412402510643005,violations/03ea2c3f.jpg,2025-12-23 18:44:34
+13738a90,NO-Hardhat/Mask/Vest,0.99,violations/13738a90.jpg,2025-12-25 19:50:45
+c6e814b3,NO-Hardhat/Mask/Vest,0.99,violations/c6e814b3.jpg,2025-12-25 19:52:10
+9112684d,NO-Hardhat/Mask/Vest,0.99,violations/9112684d.jpg,2025-12-25 19:52:27
+8f36f5bd,NO-Hardhat/Mask/Vest,0.99,violations/8f36f5bd.jpg,2025-12-25 19:52:38
+9fb91edd,NO-Hardhat/Mask/Vest,0.99,violations/9fb91edd.jpg,2025-12-25 19:55:06
+4b632ded,NO-Hardhat/Mask/Vest,0.99,violations/4b632ded.jpg,2025-12-25 19:55:16
+5a905aac,NO-Hardhat/Mask/Vest,0.99,violations/5a905aac.jpg,2025-12-25 19:55:25
+70291f3d,NO-Hardhat/Mask/Vest,0.99,violations/70291f3d.jpg,2025-12-25 19:55:38
+5410c66a,NO-Hardhat/Mask/Vest,0.99,violations/5410c66a.jpg,2025-12-25 19:55:46
+f79354ad,NO-Hardhat/Mask/Vest,0.99,violations/f79354ad.jpg,2025-12-25 19:55:54
+99856bbe,NO-Hardhat/Mask/Vest,0.99,violations/99856bbe.jpg,2025-12-25 19:56:04
+4c197a31,NO-Hardhat/Mask/Vest,0.99,violations/4c197a31.jpg,2025-12-25 19:56:14
+0905f9e2,NO-Hardhat/Mask/Vest,0.99,violations/0905f9e2.jpg,2025-12-25 19:56:24
+9a9cf501,NO-Hardhat/Mask/Vest,0.99,violations/9a9cf501.jpg,2025-12-25 20:30:31
+1a487402,NO-Hardhat/Mask/Vest,0.99,violations/1a487402.jpg,2025-12-25 20:30:39
+cf23cf2c,NO-Hardhat/Mask/Vest,0.99,violations/cf23cf2c.jpg,2025-12-25 20:30:48
+daebaea6,PPE Violation,0.921844482421875,violations/daebaea6.jpg,2025-12-25 20:46:45
+422c0423,PPE Violation,0.9091557264328003,violations/422c0423.jpg,2025-12-25 20:46:54
+50c0b8e4,PPE Violation,0.9270972013473511,violations/50c0b8e4.jpg,2025-12-25 20:47:03
+ab1aa4d4,PPE Violation,0.9280898571014404,violations/ab1aa4d4.jpg,2025-12-25 20:49:03
+1433c3a0,PPE Violation,0.9346689581871033,violations/1433c3a0.jpg,2025-12-25 20:49:12
+d8877320,PPE Violation,0.9086921811103821,violations/d8877320.jpg,2025-12-25 20:49:47
+f2885553,PPE Violation,0.9190555810928345,violations/f2885553.jpg,2025-12-25 20:49:56
+73dbacfb,"No Helmet, No Mask, No Vest",0.9091846942901611,violations/73dbacfb.jpg,2025-12-25 20:57:31
+5cc5a68a,"No Helmet, No Mask, No Vest",0.934115469455719,violations/5cc5a68a.jpg,2025-12-25 20:58:26
+ab76b274,"No Helmet, No Mask, No Vest",0.9390860795974731,violations/ab76b274.jpg,2025-12-25 21:05:22
+e0ffee36,person,0.7931228876113892,violations/e0ffee36.jpg,2025-12-25 21:08:28
+6cda7513,"No Helmet, No Mask, No Vest",0.9401134848594666,violations/6cda7513.jpg,2025-12-25 21:14:05
+"30b0c9f9","person","0.8971","violations\30b0c9f9.jpg","2025-12-26 10:33:40"
