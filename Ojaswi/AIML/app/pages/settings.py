@@ -5,6 +5,7 @@ from pathlib import Path
 SETTINGS_FILE = Path("database/settings.json")
 
 
+
 # ------------------------------
 # Load Settings
 # ------------------------------

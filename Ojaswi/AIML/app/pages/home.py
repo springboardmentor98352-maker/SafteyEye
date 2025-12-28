@@ -12,37 +12,36 @@ def load_data():
     if not csv_path.exists() or csv_path.stat().st_size == 0:
         return pd.DataFrame(columns=["id", "label", "confidence", "image", "timestamp"])
 
-    # 1️⃣ Read CSV safely even if some rows are broken
     df = pd.read_csv(
         csv_path,
-        header=0,              # IMPORTANT: header exists in your file
-        on_bad_lines="skip",   # skip corrupted rows (DOES NOT DELETE FILE)
+        header=0,
+        on_bad_lines="skip",
         engine="python"
     )
 
-    # 2️⃣ Force correct columns (old data compatible)
     expected_cols = ["id", "label", "confidence", "image", "timestamp"]
     df = df[[c for c in expected_cols if c in df.columns]]
 
-    # 3️⃣ Fix confidence column (THIS FIXES YOUR ERROR)
     df["confidence"] = pd.to_numeric(df["confidence"], errors="coerce")
-
-    # 4️⃣ Drop rows where mandatory data is missing
     df = df.dropna(subset=["id", "label", "confidence", "image", "timestamp"])
+
+    # 🔥 keep only images that exist
+    df = df[df["image"].apply(lambda x: Path(x).exists())]
 
     return df
 
 
 # ==========================================================
-# MAIN DASHBOARD PAGE
+# MAIN HOME PAGE (REQUIRED BY main.py)
 # ==========================================================
 def app():
+
     st.subheader("📊 Dashboard Overview")
 
     df = load_data()
 
     # ===============================
-    # METRICS (SAFE & FIXED)
+    # METRICS (TOP SECTION)
     # ===============================
     total = len(df)
 
@@ -64,24 +63,24 @@ def app():
     st.markdown("---")
 
     # ===============================
-    # RECENT VIOLATIONS
+    # RECENT VIOLATIONS (CARDS)
     # ===============================
     st.subheader("🖼 Recent Violations")
 
     if df.empty:
-        st.info("No violation logs yet. Start Live Monitoring.")
+        st.info("✅ No violation logs yet.")
         return
 
-    recent = df.sort_values("timestamp", ascending=False).head(6)
+    recent = df.sort_values("timestamp", ascending=False).head(3)
     cols = st.columns(3)
 
     for i, row in recent.iterrows():
-        block = cols[i % 3]
+        block = cols[list(recent.index).index(i) % 3]
 
         block.markdown(
             f"""
             <div style='padding:8px; font-weight:600'>
-                {row['label']}<br>
+                🚫 {row['label']}<br>
                 <span style='font-size:12px; color:gray'>{row['timestamp']}</span><br>
                 <span style='font-size:12px'>Confidence: {float(row['confidence']):.2f}</span>
             </div>
@@ -94,4 +93,3 @@ def app():
             block.image(str(img_path), use_column_width=True)
         else:
             block.warning("⚠️ Image Missing")
-

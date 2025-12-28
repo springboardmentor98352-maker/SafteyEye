@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 import base64
+import uuid
 
 # ==========================================================
 # LOAD VIOLATION DATA
@@ -74,7 +75,7 @@ def app():
     # ======================================================
     # RENDER EACH VIOLATION CARD
     # ======================================================
-    for _, row in df.iterrows():
+    for idx, row in df.iterrows():
         with st.container():
             col1, col2 = st.columns([3, 2])
 
@@ -83,7 +84,6 @@ def app():
                 st.markdown(f"### 🆔 {row['id']} — **{row['label']}**")
                 st.write(f"📅 `{row['timestamp']}`")
                 st.write(f"🎯 Confidence: **{float(row['confidence']):.2f}**")
-
 
                 img_path = Path(row["image"])
                 if img_path.exists():
@@ -96,14 +96,16 @@ def app():
                 pdf_path = Path(f"database/{row['id']}.pdf")
 
                 if pdf_path.exists():
-                    # Download button
                     with open(pdf_path, "rb") as f:
+                        # 🔑 UNIQUE KEY FIX (NO CRASH)
+                        unique_key = f"download_{row['id']}_{idx}_{uuid.uuid4()}"
+
                         st.download_button(
                             label="📥 Download PDF Challan",
-                            data=f,
+                            data=f.read(),
                             file_name=f"{row['id']}.pdf",
                             mime="application/pdf",
-                            key=f"download_{row['id']}"
+                            key=unique_key
                         )
 
                     # Preview PDF
